@@ -118,3 +118,28 @@ test('login', async ({ page }) => {
     // Check balance
     await expect(page.getByText('0.008')).toBeVisible();
   });
+
+  test('carousel-Home-page', async ({ page }) => {
+    await page.goto('http://localhost:5173/');
+    await page.locator('.hs-carousel-active\\:bg-blue-700').first().click();
+    await page.locator('.hs-carousel-pagination > span:nth-child(2)').click();
+    await page.locator('span:nth-child(3)').click();
+    await page.locator('span:nth-child(4)').click();
+  
+  });
+  test('Franchise Number', async ({ page }) => {
+    await page.goto('http://localhost:5173/');
+    await page.getByRole('contentinfo').getByRole('link', { name: 'Franchise' }).click();
+    await page.getByRole('link', { name: '-555-5555' }).click();
+  
+  });
+
+  test('footer navigation', async ({ page }) => {
+    await page.goto('http://localhost:5173/');
+    await page.getByRole('link', { name: 'About' }).click();
+    await page.getByRole('link', { name: 'History' }).click();
+    await page.getByRole('link', { name: 'home' }).click();
+    await page.getByRole('contentinfo').getByRole('link', { name: 'Franchise' }).click();
+    await page.getByRole('link', { name: 'home' }).click();
+    await page.getByRole('link', { name: 'About' }).click();  
+  });
