@@ -195,7 +195,8 @@ import { test, expect } from 'playwright-test-coverage';
 
     });
 
-  test('Admin login and add franchise', async ({ page }) => {
+  test('Admin add franchise and Deleate', async ({ page }) => {
+    let deleted = false;
       // Mock admin login
   await page.route('*/**/api/auth', async (route) => {
     const loginReq = { email: 'MasterComander@jwt.com', password: 'a' };
@@ -208,8 +209,9 @@ import { test, expect } from 'playwright-test-coverage';
 
   await page.route('*/**/api/franchise', async (route) => {
     if (route.request().method() === 'GET') {
+      if(deleted){await route.fulfill({ json: []})}
       // GET(got)
-      await route.fulfill({ json: [{ name: 'TheFran', admins: [{ email: 'franchisee@example.com', id: 8, name: 'Cortona' }], id: 5,  stores: [] }]})
+      else{await route.fulfill({ json: [{ name: 'TheFran', admins: [{ email: 'franchisee@example.com', id: 8, name: 'Cortona' }], id: 5,  stores: [] }]})}
     } 
     else if (route.request().method() === 'POST') {
       // POST(malone)
@@ -224,6 +226,15 @@ import { test, expect } from 'playwright-test-coverage';
       await route.fulfill({ json: franchiseRes });
     }
   });
+  await page.route('*/**/api/franchise/*', async (route) => {
+    if (route.request().method() === 'DELETE') {
+      const franchiseId = route.request().url().split('/').pop();
+      expect(franchiseId).toBe('5'); // Assuming you're deleting franchise with ID 5
+      await route.fulfill({ status: 200, json: { message: 'franchise deleted' } });
+    }
+  });
+
+
 
   // Navigate to login page
   await page.goto('http://localhost:5173/');
@@ -252,8 +263,30 @@ import { test, expect } from 'playwright-test-coverage';
   await expect(page.locator('tbody')).toContainText('TheFran');
   await expect(page.locator('tbody')).toContainText('Cortona');
 
-
+  await page.getByRole('button', { name: 'Close' }).click();
+  deleted = true
+  await page.getByRole('button', { name: 'Close' }).click();
   });    
+
+  test('User notfound admin page', async ({ page }) => {
+    await page.route('*/**/api/auth', async (route) => {
+      const loginReq = { email: 'z@jwt.com', password: 'a' };
+      const loginRes = { user: { id: 3, name: 'Kai Chen', email: 'z@jwt.com', roles: [{ role: 'diner' }] }, token: 'abcdef' };
+      expect(route.request().method()).toBe('PUT');
+      expect(route.request().postDataJSON()).toMatchObject(loginReq);
+      await route.fulfill({ json: loginRes });
+    });
+  
+  
+    await page.goto('http://localhost:5173/');
+    await page.getByRole('link', { name: 'Login' }).click();
+    await page.getByPlaceholder('Email address').fill('z@jwt.com');
+    await page.getByPlaceholder('Email address').press('Tab');
+    await page.getByPlaceholder('Password').fill('a');
+    await page.getByRole('button', { name: 'Login' }).click();
+    await page.goto('http://localhost:5173/admin-dashboard');
+    await expect(page.getByRole('heading')).toContainText('Oops');
+    });
 
   test('carousel-Home-page', async ({ page }) => {
     await page.goto('http://localhost:5173/');
@@ -264,7 +297,7 @@ import { test, expect } from 'playwright-test-coverage';
   
   });
 
-  test('Franchise Number', async ({ page }) => {
+  test('Franchise PhoneNumber', async ({ page }) => {
     await page.goto('http://localhost:5173/');
     await page.getByRole('contentinfo').getByRole('link', { name: 'Franchise' }).click();
     await page.getByRole('link', { name: '-555-5555' }).click();
