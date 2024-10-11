@@ -188,14 +188,14 @@ import { test, expect } from 'playwright-test-coverage';
     await page.getByPlaceholder('Password').fill('a');
     await page.getByRole('button', { name: 'Login' }).click();
 
-  //navigate to Admin page
+  //Admin
     
     await expect(page.getByRole('link', { name: 'Admin', exact: true })).toBeVisible();await expect(page.getByRole('link', { name: 'Admin', exact: true })).toBeVisible();
     await page.getByRole('link', { name: 'Admin' }).click();
 
     });
 
-  test('Admin add franchise and Deleate', async ({ page }) => {
+  test('Admin add franchise and Delete', async ({ page }) => {
     let deleted = false;
       // Mock admin login
   await page.route('*/**/api/auth', async (route) => {
@@ -229,29 +229,27 @@ import { test, expect } from 'playwright-test-coverage';
   await page.route('*/**/api/franchise/*', async (route) => {
     if (route.request().method() === 'DELETE') {
       const franchiseId = route.request().url().split('/').pop();
-      expect(franchiseId).toBe('5'); // Assuming you're deleting franchise with ID 5
+      expect(franchiseId).toBe('5'); 
       await route.fulfill({ status: 200, json: { message: 'franchise deleted' } });
     }
   });
 
 
 
-  // Navigate to login page
+  // login 
   await page.goto('http://localhost:5173/');
   await page.getByRole('link', { name: 'Login' }).click();
-
-  // Perform login
   await page.getByPlaceholder('Email address').fill('MasterComander@jwt.com');
   await page.getByPlaceholder('Password').fill('a');
   await page.getByRole('button', { name: 'Login' }).click();
 
 
-  // Navigate to Admin page
+  //  Admin page
   await expect(page.getByRole('link', { name: 'Admin' })).toBeVisible();
   await page.getByRole('link', { name: 'Admin' }).click();
 
   
-  
+  //Add fran
   await page.getByRole('button', { name: 'Add Franchise' }).click();
   await page.getByPlaceholder('franchise name').click();
   await page.getByPlaceholder('franchise name').fill('TheFran');
@@ -312,6 +310,81 @@ import { test, expect } from 'playwright-test-coverage';
     await page.getByRole('contentinfo').getByRole('link', { name: 'Franchise' }).click();
   });
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    test('User admin add store page', async ({ page }) => {
+    let deleted = false;
+      // Mock admin login
+  await page.route('*/**/api/auth', async (route) => {
+    const loginReq = { email: 'franchisee@example.com', password: 'a' };
+    const loginRes = { user: { id: 8, name: 'Cortona', email: 'franchisee@example.com', roles: [{ role: 'franchisee' }] }, token: 'abcdef' };
+    expect(route.request().method()).toBe('PUT');
+    expect(route.request().postDataJSON()).toMatchObject(loginReq);
+    await route.fulfill({ json: loginRes });
+  });
+
+
+  await page.route('*/**/api/franchise/', async (route) => {
+    if (route.request().method() === 'GET') {
+      if(deleted){await route.fulfill({ json: []})}
+      // GET(got)
+      else{await route.fulfill({ json: [{ name: 'TheFran', admins: [{ email: 'franchisee@example.com', id: 8, name: 'Cortona' }], id: 5,  stores: [{ id: 4, name: 'SLC', totalRevenue: 2 }] }]})}
+    } 
+    else if (route.request().method() === 'POST') {
+      // POST(malone)
+      const franchiseReq = { name: 'TheFran', admins: [{ email: 'franchisee@example.com' }] };
+      const franchiseRes = { 
+        name: 'TheFran', 
+        admins: [{email: 'franchisee@example.com', id: 8, name: 'Cortona'}],
+        id: 5
+      };
+      expect(route.request().method()).toBe('POST');
+      expect(route.request().postDataJSON()).toMatchObject(franchiseReq);
+      await route.fulfill({ json: franchiseRes });
+    }
+  });
+  await page.route('*/**/api/franchise/*', async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({ json: [{ name: 'TheFran', admins: [{ email: 'franchisee@example.com', id: 8, name: 'Cortona' }], id: 5,  stores: [{ id: 4, name: 'SLC', totalRevenue: 2 }] }]})}
+    });
+
+
+
+  //login page
+  await page.goto('http://localhost:5173/');
+  await page.getByRole('link', { name: 'Login' }).click();
+
+  // login
+  await page.getByPlaceholder('Email address').fill('franchisee@example.com');
+  await page.getByPlaceholder('Password').fill('a');
+  await page.getByRole('button', { name: 'Login' }).click();
+
+await page.getByLabel('Global').getByRole('link', { name: 'Franchise' }).click();
+await expect(page.getByRole('heading')).toContainText('TheFran');
+await expect(page.locator('tbody')).toContainText('SLC');
+await expect(page.locator('tbody')).toContainText('2 ₿');
+await expect(page.getByLabel('Global').getByRole('link', { name: 'Franchise' })).toBeVisible();
+
+await page.getByRole('button', { name: 'Create store' }).click();
+
+
+  });    
 
 
 
