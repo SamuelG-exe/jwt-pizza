@@ -6,6 +6,34 @@ import { test, expect } from 'playwright-test-coverage';
 
   expect(await page.title()).toBe('JWT Pizza');
 });
+test('docs', async ({ page }) => {
+  await page.route('*/**/api/auth', async (route) => {
+    const loginReq = { email: 'MasterComander@jwt.com', password: 'a' };
+    const loginRes = { user: { id: 3, name: 'MasterComander', email: 'MasterComander@jwt.com', roles: [{ role: 'admin' }] }, token: 'abcdef' };
+    expect(route.request().method()).toBe('PUT');
+    expect(route.request().postDataJSON()).toMatchObject(loginReq);
+    await route.fulfill({ json: loginRes });
+  });
+
+  await page.goto('http://localhost:5173/docs');
+//await page.goto('http://localhost:5173/docs/description');
+await page.goto('http://localhost:5173/docs/endpoints');
+await expect(page.getByRole('heading')).toContainText('JWT Pizza API');
+
+//Login and do it again
+await page.goto('http://localhost:5173/');
+await page.getByRole('link', { name: 'Login' }).click();
+await page.getByPlaceholder('Email address').fill('MasterComander@jwt.com');
+await page.getByPlaceholder('Email address').press('Tab');
+await page.getByPlaceholder('Password').fill('a');
+await page.getByRole('button', { name: 'Login' }).click();
+
+await page.goto('http://localhost:5173/docs');
+await page.goto('http://localhost:5173/docs/description');
+await page.goto('http://localhost:5173/docs/endpoints');
+await expect(page.getByRole('heading')).toContainText('JWT Pizza API');
+
+});
 
 
   test('register', async ({ page }) => {
@@ -51,6 +79,7 @@ import { test, expect } from 'playwright-test-coverage';
   });
 
   test('logOut', async ({ page }) => {
+    let loggedout = false;
     //Log in and out page routes
     await page.route('*/**/api/auth', async (route) => {
       if (route.request().method() === 'PUT') {
@@ -59,9 +88,10 @@ import { test, expect } from 'playwright-test-coverage';
         expect(route.request().postDataJSON()).toMatchObject(loginReq);
         await route.fulfill({ json: loginRes });
       } else if (route.request().method() === 'DELETE') {
-        const logOutRes = { message: 'logout successful' };
+        if(loggedout){const logOutRes = {};}
+        else{const logOutRes = { message: 'logout successful' };
         expect(route.request().headers()['authorization']).toBe('Bearer abcdef');
-        await route.fulfill({ json: logOutRes });
+        await route.fulfill({ json: logOutRes });}
       }
     });
   
@@ -75,7 +105,10 @@ import { test, expect } from 'playwright-test-coverage';
     
     //LogOut
     await page.getByRole('link', { name: 'Logout' }).click();
+    loggedout = true
     await expect(page.locator('#navbar-dark')).toBeVisible();
+    await page.goto('http://localhost:5173/logout');
+
     });
 
   test('purchase with login', async ({ page }) => {
@@ -310,24 +343,6 @@ import { test, expect } from 'playwright-test-coverage';
     await page.getByRole('contentinfo').getByRole('link', { name: 'Franchise' }).click();
   });
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     test('User admin add store page', async ({ page }) => {
     let deleted = false;
       // Mock admin login
@@ -386,6 +401,86 @@ await page.getByRole('button', { name: 'Create store' }).click();
   });    
 
 
+  test('franchisee dash', async ({ page }) => {
+    let deleted = false;
+      // Mock admin login
+  await page.route('*/**/api/auth', async (route) => {
+    const loginReq = { email: 'franchisee@example.com', password: 'a' };
+    const loginRes = { user: { id: 8, name: 'Cortona', email: 'franchisee@example.com', roles: [{ role: 'franchisee' }] }, token: 'abcdef' };
+    expect(route.request().method()).toBe('PUT');
+    expect(route.request().postDataJSON()).toMatchObject(loginReq);
+    await route.fulfill({ json: loginRes });
+  });
 
 
+  await page.route('*/**/api/franchise/', async (route) => {
+    if (route.request().method() === 'GET') {
+      if(deleted){await route.fulfill({ json: []})}
+      // GET(got)
+      else{await route.fulfill({ json: [{ name: 'TheFran', admins: [{ email: 'franchisee@example.com', id: 8, name: 'Cortona' }], id: 5,  stores: [{ id: 4, name: 'SLC', totalRevenue: 2 }] }]})}
+    } 
+    else if (route.request().method() === 'POST') {
+      // POST(malone)
+      const franchiseReq = { name: 'TheFran', admins: [{ email: 'franchisee@example.com' }] };
+      const franchiseRes = { 
+        name: 'TheFran', 
+        admins: [{email: 'franchisee@example.com', id: 8, name: 'Cortona'}],
+        id: 5
+      };
+      expect(route.request().method()).toBe('POST');
+      expect(route.request().postDataJSON()).toMatchObject(franchiseReq);
+      await route.fulfill({ json: franchiseRes });
+    }
+  });
+  await page.route('*/**/api/franchise/*', async (route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({ json: [{ name: 'TheFran', admins: [{ email: 'franchisee@example.com', id: 8, name: 'Cortona' }], id: 5,  stores: [{ id: 4, name: 'SLC', totalRevenue: 2 }] }]})}
+    });
+
+
+
+  await page.goto('http://localhost:5173/');
+  await page.getByRole('link', { name: 'Login' }).click();
+
+  // login
+  await page.getByPlaceholder('Email address').fill('franchisee@example.com');
+  await page.getByPlaceholder('Password').fill('a');
+  await page.getByRole('button', { name: 'Login' }).click();
+
+  await page.getByRole('link', { name: 'C', exact: true }).click();
+
+});    
+
+
+test('dnocs', async ({ page }) => {
+  await page.route('*/**/api/auth', async (route) => {
+    const loginReq = { email: 'MasterComander@jwt.com', password: 'a' };
+    const loginRes = { user: { id: 3, name: 'MasterComander', email: 'MasterComander@jwt.com', roles: [{ role: 'admin' }] }, token: 'abcdef' };
+    expect(route.request().method()).toBe('PUT');
+    expect(route.request().postDataJSON()).toMatchObject(loginReq);
+    await route.fulfill({ json: loginRes });
+  });
+
+  await page.goto('http://localhost:5173/docs');
+
+  await page.goto('http://localhost:5173/docs/description');
+
+  await page.goto('http://localhost:5173/docs/endpoints');
+
+  await page.goto('http://localhost:5173/');
+  await page.getByRole('link', { name: 'Login' }).click();
+  await page.getByPlaceholder('Email address').fill('MasterComander@jwt.com');
+  await page.getByPlaceholder('Password').fill('a');
+  await page.getByRole('button', { name: 'Login' }).click();
+
+  await page.goto('http://localhost:5173/docs');
+
+  await page.goto('http://localhost:5173/docs/description');
+
+  await page.goto('http://localhost:5173/docs/endpoints');
+
+  await page.goto('http://localhost:5173/docs/nonexistent');
+
+  await page.getByRole('link', { name: 'http://localhost:' }).click();
+});
   
