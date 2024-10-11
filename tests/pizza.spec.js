@@ -452,7 +452,7 @@ await page.getByRole('button', { name: 'Create store' }).click();
 });    
 
 
-test('dnocs', async ({ page }) => {
+test('docss', async ({ page }) => {
   await page.route('*/**/api/auth', async (route) => {
     const loginReq = { email: 'MasterComander@jwt.com', password: 'a' };
     const loginRes = { user: { id: 3, name: 'MasterComander', email: 'MasterComander@jwt.com', roles: [{ role: 'admin' }] }, token: 'abcdef' };
@@ -461,12 +461,24 @@ test('dnocs', async ({ page }) => {
     await route.fulfill({ json: loginRes });
   });
 
+  await page.route('*/**/api/docs/*', async (route) => {
+    const docType = route.request().url().split('/').pop();
+    let docContent = {};
+    
+    if (docType === 'description') {
+      docContent = { title: 'API Description', content: 'This is the API description.' };
+    } else if (docType === 'endpoints') {
+      docContent = { title: 'API Endpoints', content: 'List of API endpoints.' };
+    }
+    
+    await route.fulfill({ json: docContent });
+  });
+
+  // Test unauthenticated access
   await page.goto('http://localhost:5173/docs');
+  
 
-  await page.goto('http://localhost:5173/docs/description');
-
-  await page.goto('http://localhost:5173/docs/endpoints');
-
+  // Login and test authenticated access
   await page.goto('http://localhost:5173/');
   await page.getByRole('link', { name: 'Login' }).click();
   await page.getByPlaceholder('Email address').fill('MasterComander@jwt.com');
@@ -475,12 +487,107 @@ test('dnocs', async ({ page }) => {
 
   await page.goto('http://localhost:5173/docs');
 
-  await page.goto('http://localhost:5173/docs/description');
-
-  await page.goto('http://localhost:5173/docs/endpoints');
-
-  await page.goto('http://localhost:5173/docs/nonexistent');
-
-  await page.getByRole('link', { name: 'http://localhost:' }).click();
 });
-  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+test('purchase Error', async ({ page }) => {
+  await page.route('*/**/api/order/menu', async (route) => {
+    const menuRes = [
+      { id: 1, title: 'Veggie', image: 'pizza1.png', price: 0.0038, description: 'A garden of delight' },
+      { id: 2, title: 'Pepperoni', image: 'pizza2.png', price: 0.0042, description: 'Spicy treat' },
+    ];
+    expect(route.request().method()).toBe('GET');
+    await route.fulfill({ json: menuRes });
+  });
+
+  await page.route('*/**/api/franchise', async (route) => {
+    const franchiseRes = [
+      {
+        id: 2,
+        name: 'LotaPizza',
+        stores: [
+          { id: 4, name: 'Lehi' },
+          { id: 5, name: 'Springville' },
+          { id: 6, name: 'American Fork' },
+        ],
+      },
+      { id: 3, name: 'PizzaCorp', stores: [{ id: 7, name: 'Spanish Fork' }] },
+      { id: 4, name: 'topSpot', stores: [] },
+    ];
+    expect(route.request().method()).toBe('GET');
+    await route.fulfill({ json: franchiseRes });
+  });
+
+  await page.route('*/**/api/auth', async (route) => {
+    const loginReq = { email: 'd@jwt.com', password: 'a' };
+    const loginRes = { user: { id: 3, name: 'Kai Chen', email: 'd@jwt.com', roles: [{ role: 'diner' }] }, token: 'abcdef' };
+    expect(route.request().method()).toBe('PUT');
+    expect(route.request().postDataJSON()).toMatchObject(loginReq);
+    await route.fulfill({ json: loginRes });
+  });
+
+  await page.route('*/**/api/order', async (route) => {
+    const orderReq = {
+      items: [
+        { menuId: 184, description: 'taco', price: 0.5 },
+      ],
+      storeId: '4',
+      franchiseId: 2,
+    };
+    await route.fulfill({
+      status: 400, 
+      body: JSON.stringify({ error: 'Internal Server Error TEST' }),
+      headers: { 'Content-Type': 'application/json' },});
+  });
+
+  await page.goto('http://localhost:5173/');
+
+  // Go to order page
+  await page.getByRole('button', { name: 'Order now' }).click();
+
+  // Create order
+  await expect(page.locator('h2')).toContainText('Awesome is a click away');
+  await page.getByRole('combobox').selectOption('4');
+  await page.getByRole('link', { name: 'Image Description Veggie A' }).click();
+  await page.getByRole('link', { name: 'Image Description Pepperoni' }).click();
+  await expect(page.locator('form')).toContainText('Selected pizzas: 2');
+  await page.getByRole('button', { name: 'Checkout' }).click();
+
+  // Login
+  await page.getByPlaceholder('Email address').click();
+  await page.getByPlaceholder('Email address').fill('d@jwt.com');
+  await page.getByPlaceholder('Email address').press('Tab');
+  await page.getByPlaceholder('Password').fill('a');
+  await page.getByRole('button', { name: 'Login' }).click();
+
+  // Pay
+  await expect(page.getByRole('main')).toContainText('Send me those 2 pizzas right now!');
+  await expect(page.locator('tbody')).toContainText('Veggie');
+  await expect(page.locator('tbody')).toContainText('Pepperoni');
+  await expect(page.locator('tfoot')).toContainText('0.008 ₿');
+  await page.getByRole('button', { name: 'Pay now' }).click();
+
+
+});
