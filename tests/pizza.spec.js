@@ -381,8 +381,8 @@ await expect(page.getByRole('heading')).toContainText('JWT Pizza API');
 
 
 
-  await page.goto('http://localhost:5173/');
-  await page.getByRole('link', { name: 'Login' }).click(); 
+  await page.goto('http://localhost:5173/'); 
+  await page.getByRole('link', { name: 'Login' }).click();
 
   // login
   await page.getByPlaceholder('Email address').fill('franchisee@example.com');
