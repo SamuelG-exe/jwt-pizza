@@ -59,7 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: production
-      url: https://pizza.byucsstudent.click
+      url: https://pizza.jwtpizza-digital.store
     env:
       version: ${{needs.build.outputs.version}}
     steps:
