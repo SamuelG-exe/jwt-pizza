@@ -15,7 +15,7 @@ You can see a working example of the application at [pizza.cs329.click](https://
 1. Fork this repository
    ![Fork repo](forkRepo.png)
 
-   and then clone the fork from your GitHub account to your development environment.
+   and then clone the fork from your GitHub account to your development environment. 
 
    ```sh
    git clone https://github.com/youraccountnamehere/jwt-pizza.git
